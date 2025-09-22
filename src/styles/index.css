@@ -1,0 +1,150 @@
+/* Purpose: Legacy class-based styles for panels, buttons, and layout alongside Tailwind utilities.
+   Editing: Keep class names stable until components migrate fully to Tailwind; adjust variables to retheme quickly.
+   Dependencies: Used by Button, UI components, and older screens via className attributes. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Legacy helpers kept for layout compatibility */
+:root {
+  --bg: #0b0d10;
+  --panel: #141921;
+  --text: #eaf0f6;
+  --accent: #ff7b00;
+  --accent-2: #2bd67b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid #222a35;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.title {
+  font-size: clamp(20px, 2.8vw, 32px);
+  margin: 0 0 12px;
+  letter-spacing: 0.5px;
+}
+
+.subtitle {
+  opacity: 0.8;
+  margin: 0 0 18px;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.statbar {
+  width: 100%;
+  background: #0f1319;
+  border: 1px solid #1c2430;
+  border-radius: 100px;
+  height: 14px;
+  overflow: hidden;
+}
+
+.statbar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #ffa34d);
+}
+
+.statbar.chakra > span {
+  background: linear-gradient(90deg, var(--accent-2), #8af7c3);
+}
+
+.card {
+  background: #0f1319;
+  border: 1px solid #1b2230;
+  border-radius: 12px;
+  padding: 12px;
+  min-width: 180px;
+}
+
+.card h3 {
+  margin: 4px 0 8px;
+  font-size: 16px;
+}
+
+.card small {
+  opacity: 0.8;
+}
+
+.grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.actions {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.action-btn {
+  padding: 12px 14px;
+  border: 1px solid #2a3342;
+  border-radius: 10px;
+  background: #11161c;
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.06s ease, border-color 0.2s ease;
+  text-align: left;
+}
+
+.action-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.back {
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-weight: 600;
+}
+
+hr.sep {
+  border: none;
+  border-top: 1px solid #1d2633;
+  margin: 12px 0;
+}
