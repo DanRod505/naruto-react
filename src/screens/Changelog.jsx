@@ -6,6 +6,23 @@ import React from "react";
 import Button from "../components/Button";
 
 const CHANGELOG = [
+    {
+    version: "0.3.3",
+    date: "2025-09-23",
+    highlights: ["Mobile First", "Safe Areas", "UI Responsiva"],
+    changes: [
+      "Adicionado arquivo mobile.css com ajustes de toques, safe-areas (notch) e prefers-reduced-motion.",
+      "Criado componente AppShell para aplicar safe-areas e padronizar header/main/footer.",
+      "Atualizado App.jsx para usar AppShell.",
+      "Nav.jsx redesenhado para ser mobile-friendly (botões maiores, wrap responsivo).",
+      "FighterCard.jsx atualizado com tipografia fluida, sprites lazy/async e barras com animações leves.",
+      "Select.jsx atualizado com grid responsivo 2→3→4 colunas, bloqueio de escolha duplicada e técnicas exibidas em cards.",
+      "Battle.jsx atualizado com botões de ação grandes, auto-scroll no log e layout mobile-first.",
+      "FXLayer.jsx otimizado com animações curtas baseadas em transform/opacity para melhor performance em celulares.",
+      "Melhorias gerais de acessibilidade (aria-live no log, aria-pressed em botões de seleção)."
+    ],
+  },
+  
   {
     version: "0.3.2",
     date: "2025-09-22",

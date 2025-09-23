@@ -1,0 +1,57 @@
+/* src/styles/mobile.css
+   Ajustes específicos para melhorar a experiência em dispositivos móveis.
+   -----------------------------------------------------
+   - Remove highlight azul ao tocar em links/botões (Android).
+   - Evita atraso de 300ms em toques (iOS antigo).
+   - Suporte a notch/áreas seguras com variáveis CSS.
+   - Respeita prefers-reduced-motion para acessibilidade.
+   - Melhora rolagem com momentum scrolling no iOS.
+*/
+
+/* Remove highlight azul em cliques */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Toques mais responsivos */
+html,
+body {
+  touch-action: manipulation;
+}
+
+/* Safe areas (notch, barras de sistema) */
+:root {
+  --sa-top: env(safe-area-inset-top);
+  --sa-bottom: env(safe-area-inset-bottom);
+  --sa-left: env(safe-area-inset-left);
+  --sa-right: env(safe-area-inset-right);
+}
+
+/* Aplicar safe area em containers principais se necessário */
+.app-shell {
+  padding-top: var(--sa-top);
+  padding-bottom: var(--sa-bottom);
+  padding-left: var(--sa-left);
+  padding-right: var(--sa-right);
+}
+
+/* Preferências de movimento do usuário */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Suaviza scroll no iOS */
+html {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ajusta fonte mínima para evitar zoom automático em inputs no iOS */
+input,
+textarea,
+select {
+  font-size: 16px;
+}

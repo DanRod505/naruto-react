@@ -2,41 +2,45 @@
 // Editing: Update layout or motion variants carefully; keep dimensions aligned with Battle screen grid.
 // Dependencies: framer-motion, Tailwind. Espera que cada fighter tenha `sprite` (string) em vez de `emoji`.
 
-import React from "react";
-import { motion } from "framer-motion";
+import React from "react"
+import { motion } from "framer-motion"
 
-const MotionDiv = motion.div;
+const MotionDiv = motion.div
 
 export function FighterCard({ fighter, side, active }) {
-  const hpPct = fighter.hp / fighter.maxHP;
-  const chakraPct = fighter.chakra / fighter.maxChakra;
+  const hpPct = fighter.hp / fighter.maxHP
+  const chakraPct = fighter.chakra / fighter.maxChakra
   const badge =
     side === "left"
       ? "bg-orange-500/20 border-orange-500/30"
-      : "bg-sky-500/20 border-sky-500/30";
+      : "bg-sky-500/20 border-sky-500/30"
 
   return (
     <div
-      className={`relative rounded-2xl border border-neutral-800 bg-gradient-to-b from-neutral-900/70 to-neutral-950 p-4 ${
+      className={`relative rounded-2xl border border-neutral-800 bg-gradient-to-b from-neutral-900/70 to-neutral-950 p-3 sm:p-4 ${
         side === "left" ? "items-start" : "items-end"
       }`}
     >
       {/* header: avatar + nome + badge */}
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-lg overflow-hidden border border-neutral-800 bg-neutral-900">
+        <div className="h-12 w-12 sm:h-10 sm:w-10 rounded-xl overflow-hidden border border-neutral-800 bg-neutral-900">
           {fighter.sprite ? (
             <img
               src={fighter.sprite}
               alt={fighter.name}
               className="h-full w-full object-cover"
               loading="lazy"
+              decoding="async"
             />
           ) : (
             <div className="h-full w-full bg-neutral-800" />
           )}
         </div>
-        <div>
-          <div className="text-lg font-bold leading-tight">{fighter.name}</div>
+
+        <div className="min-w-0">
+          <div className="font-bold leading-tight text-[clamp(14px,3.6vw,18px)] truncate">
+            {fighter.name}
+          </div>
           <div
             className={`mt-1 inline-flex items-center gap-2 text-[10px] px-2 py-0.5 rounded-full border ${badge}`}
           >
@@ -46,8 +50,8 @@ export function FighterCard({ fighter, side, active }) {
         </div>
       </div>
 
-      {/* showcase: sprite grande com FX de fundo */}
-      <div className="relative mt-4 h-36 rounded-xl bg-neutral-900/60 border border-neutral-800 overflow-hidden flex items-center justify-center">
+      {/* showcase: sprite grande com FX de fundo (responsivo) */}
+      <div className="relative mt-3 sm:mt-4 h-32 sm:h-36 md:h-44 rounded-xl bg-neutral-900/60 border border-neutral-800 overflow-hidden flex items-center justify-center">
         <MotionDiv
           className="absolute inset-0"
           animate={{
@@ -58,15 +62,17 @@ export function FighterCard({ fighter, side, active }) {
             ],
           }}
           transition={{ duration: 6, repeat: Infinity }}
+          aria-hidden
         />
         {fighter.sprite ? (
           <img
             src={fighter.sprite}
             alt={fighter.name}
-            className={`max-h-32 object-contain ${
+            className={`max-h-28 sm:max-h-32 md:max-h-40 object-contain ${
               side === "left" ? "translate-x-[-6px]" : "translate-x-[6px]"
             }`}
             loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="h-full w-full bg-neutral-900" />
@@ -74,7 +80,7 @@ export function FighterCard({ fighter, side, active }) {
       </div>
 
       {/* barras */}
-      <div className="mt-4 space-y-2">
+      <div className="mt-3 sm:mt-4 space-y-2">
         <Bar label="HP" value={fighter.hp} max={fighter.maxHP} pct={hpPct} kind="hp" />
         <Bar
           label="Chakra"
@@ -85,12 +91,12 @@ export function FighterCard({ fighter, side, active }) {
         />
       </div>
     </div>
-  );
+  )
 }
 
 function Bar({ label, value, max, pct, kind }) {
-  const color =
-    kind === "hp" ? "from-rose-600 to-rose-500" : "from-sky-600 to-sky-500";
+  const color = kind === "hp" ? "from-rose-600 to-rose-500" : "from-sky-600 to-sky-500"
+  const width = Math.max(0, Math.min(100, Math.round(pct * 100))) // guarda
 
   return (
     <div>
@@ -100,26 +106,26 @@ function Bar({ label, value, max, pct, kind }) {
           {value} / {max}
         </span>
       </div>
-      <div className="h-3 rounded-full bg-neutral-900 border border-neutral-800 overflow-hidden">
+      <div className="h-3 sm:h-3.5 rounded-full bg-neutral-900 border border-neutral-800 overflow-hidden">
         <motion.div
           className={`h-full bg-gradient-to-r ${color}`}
-          style={{ width: `${Math.round(pct * 100)}%` }}
+          style={{ width: `${width}%` }}
           initial={false}
-          animate={{ width: `${Math.round(pct * 100)}%` }}
+          animate={{ width: `${width}%` }}
           transition={{ type: "spring", stiffness: 120, damping: 18 }}
         />
       </div>
     </div>
-  );
+  )
 }
 
 function PulseDot() {
   return (
     <span className="relative inline-flex h-2.5 w-2.5">
-      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400/70"></span>
-      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400/70" />
+      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
     </span>
-  );
+  )
 }
 
-export default FighterCard;
+export default FighterCard

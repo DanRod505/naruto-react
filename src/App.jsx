@@ -1,35 +1,37 @@
-// Purpose: Simple router coordinating home, selection, battle, and changelog with a global nav.
-// Editing: Keep route handling in one place; ensure fighters exist before rendering Battle.
+// Purpose: App container with safe-area handling and route coordination (home, select, fight, changelog).
+// Editing: Update routes/screens here; AppShell wraps everything with safe-area support for mobile.
+// Dependencies: AppShell, Nav, Home, Select, Battle, Changelog, cloneFighter.
 
-import React, { useState } from "react";
-import "./styles/index.css";
-import Nav from "./components/Nav";
-import Home from "./screens/Home";
-import Select from "./screens/Select";
-import Battle from "./screens/Battle";
-import Changelog from "./screens/Changelog";
-import { cloneFighter } from "./systems/battleEngine";
+import React, { useState } from "react"
+import Nav from "./components/Nav"
+import Home from "./screens/Home"
+import Select from "./screens/Select"
+import Battle from "./screens/Battle"
+import Changelog from "./screens/Changelog"
+import { cloneFighter } from "./systems/battleEngine"
+import AppShell from "./components/AppShell"
 
 // Importa a versão diretamente do package.json
 import pkg from "../package.json"
 
 export default function App() {
-  const [route, setRoute] = useState("home"); // home | select | fight | changelog
-  const [fighters, setFighters] = useState(null); // { p1, p2 }
+  const [route, setRoute] = useState("home") // home | select | fight | changelog
+  const [fighters, setFighters] = useState(null) // { p1, p2 }
 
-  const canFight = Boolean(fighters?.p1 && fighters?.p2);
-  const version = `v${pkg.version}`;
+  const canFight = Boolean(fighters?.p1 && fighters?.p2)
+  const version = `v${pkg.version}`
 
   const go = (next) => {
     // Se tentar ir para "fight" sem lutadores, redireciona para "select"
-    if (next === "fight" && !canFight) return setRoute("select");
-    setRoute(next);
-  };
+    if (next === "fight" && !canFight) return setRoute("select")
+    setRoute(next)
+  }
 
   return (
-    <div>
-      <Nav route={route} onNav={go} canFight={canFight} version={version} />
-
+    <AppShell
+      header={<Nav route={route} onNav={go} canFight={canFight} version={version} />}
+      footer={<div className="text-xs opacity-70 text-center">{version}</div>}
+    >
       {route === "home" && (
         <Home onStart={() => go("select")} onChangelog={() => go("changelog")} />
       )}
@@ -37,8 +39,8 @@ export default function App() {
       {route === "select" && (
         <Select
           onStart={(p1, p2) => {
-            setFighters({ p1: cloneFighter(p1), p2: cloneFighter(p2) });
-            go("fight");
+            setFighters({ p1: cloneFighter(p1), p2: cloneFighter(p2) })
+            go("fight")
           }}
           onBack={() => go("home")}
         />
@@ -47,12 +49,8 @@ export default function App() {
       {route === "changelog" && <Changelog version={version} onBack={() => go("home")} />}
 
       {route === "fight" && canFight && (
-        <Battle
-          initialP1={fighters.p1}
-          initialP2={fighters.p2}
-          onBack={() => go("select")}
-        />
+        <Battle initialP1={fighters.p1} initialP2={fighters.p2} onBack={() => go("select")} />
       )}
-    </div>
-  );
+    </AppShell>
+  )
 }
