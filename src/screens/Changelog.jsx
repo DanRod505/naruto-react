@@ -6,7 +6,31 @@ import React from "react";
 import Button from "../components/Button";
 
 const CHANGELOG = [
-    {
+  {
+    version: "0.3.4",
+    date: "2025-09-23",
+    highlights: ["HUD mobile com barras", "HP dinâmico", "Ranks nas técnicas", "Fluxo de batalha direto"],
+    changes: [
+      // Navegação & fluxo
+      "Ao apertar Iniciar Batalha na Seleção, agora vai direto para a tela de batalha (sem passo intermediário na Nav).",
+      // Mobile & responsividade
+      "Tela de Select refeita para mobile no mesmo padrão da Battle (portrait com abas, landscape em split), cabendo toda na página.",
+      "HUD móvel da Battle ganhou mini-barras de HP e Chakra com animação.",
+      // UI/UX das barras
+      "Barras de HP agora variam de cor por percentual (verde ≥60%, amarelo 30–59%, vermelho <30%) no desktop e no mobile.",
+      // Técnicas
+      "Adicionado campo 'rank' às técnicas e exibição do badge de rank tanto na Battle quanto na Select.",
+      "Nomes das técnicas deixaram de truncar e passam a quebrar linha (desktop e mobile).",
+      // Sprites & robustez
+      "FighterCard atualizado com resolução de caminho dos sprites (compatível com mobile), fallback com monograma e onError.",
+      // Correções
+      "Corrigida renderização da Battle no desktop (ramo desktop reintroduzido).",
+      "Padronizado import do SegmentedTabs para evitar erro de 'casing' em alguns ambientes.",
+      "Eliminado erro 'SummaryChip is not defined' na Select.",
+    ],
+  },
+
+  {
     version: "0.3.3",
     date: "2025-09-23",
     highlights: ["Mobile First", "Safe Areas", "UI Responsiva"],
@@ -22,7 +46,6 @@ const CHANGELOG = [
       "Melhorias gerais de acessibilidade (aria-live no log, aria-pressed em botões de seleção)."
     ],
   },
-  
   {
     version: "0.3.2",
     date: "2025-09-22",
@@ -84,7 +107,6 @@ export default function Changelog({ onBack, version = "v0.0.0" }) {
       <header className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold tracking-tight">Changelog</h1>
-          {/* Badge com a versão atual em uso (vinda do App.jsx) */}
           <span
             className="text-[11px] px-2 py-0.5 rounded-full border border-neutral-700 bg-neutral-900/50 text-neutral-300"
             title="Versão atual em uso"
