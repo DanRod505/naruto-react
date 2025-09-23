@@ -1,22 +1,30 @@
 // src/screens/Battle.jsx
-// Purpose: Battle loop com layout desktop e HUD compacto automático no mobile.
+// Purpose: Battle loop com layout desktop e HUD compacto (portrait & landscape).
+// Mantém lógica original e adapta o layout para caber em 100dvh no celular.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import FighterCard from "../components/FighterCard"
 import FXLayer from "../components/FXLayer"
 import { clamp, computeDamage, chooseAI } from "../systems/battleEngine"
 
-// Hook para detectar telas pequenas (<= 480px)
-function useCompact(breakpoint = 480) {
-  const [compact, setCompact] = useState(
-    typeof window !== "undefined" ? window.innerWidth <= breakpoint : false
-  )
+// Hook: detecta falta de espaço (altura/ largura) e orientação
+function useCompactSpace({ minHeight = 420, minWidth = 480 } = {}) {
+  const get = () => ({
+    w: typeof window !== "undefined" ? window.innerWidth : 1024,
+    h: typeof window !== "undefined" ? window.innerHeight : 768,
+    landscape:
+      typeof window !== "undefined"
+        ? window.matchMedia("(orientation: landscape)").matches
+        : false,
+  })
+  const [s, setS] = useState(get())
   useEffect(() => {
-    const onResize = () => setCompact(window.innerWidth <= breakpoint)
+    const onResize = () => setS(get())
     window.addEventListener("resize", onResize)
     return () => window.removeEventListener("resize", onResize)
-  }, [breakpoint])
-  return compact
+  }, [])
+  const compact = useMemo(() => s.h <= minHeight || s.w <= minWidth, [s.h, s.w, minHeight, minWidth])
+  return { compact, landscape: s.landscape, w: s.w, h: s.h }
 }
 
 export default function Battle({ initialP1, initialP2, onBack }) {
@@ -25,9 +33,9 @@ export default function Battle({ initialP1, initialP2, onBack }) {
   const [turn, setTurn] = useState("player") // player | enemy | over
   const [log, setLog] = useState([`Batalha iniciada! ${initialP1.name} vs. ${initialP2.name}.`])
   const [fx, setFx] = useState(null)
-  const [tab, setTab] = useState("actions") // abas do HUD compacto
 
-  const compact = useCompact(480)
+  const { compact, landscape } = useCompactSpace({ minHeight: 420, minWidth: 480 })
+  const [tab, setTab] = useState("actions") // usado no compacto-portrait
 
   // auto-scroll do log
   const logRef = useRef(null)
@@ -130,16 +138,10 @@ export default function Battle({ initialP1, initialP2, onBack }) {
             {p1.name} vs. {p2.name}
           </h1>
           <div className="flex items-center gap-2">
-            <button
-              onClick={onBack}
-              className="h-8 px-3 rounded-lg bg-neutral-800 border border-neutral-700 text-xs"
-            >
+            <button onClick={onBack} className="h-8 px-3 rounded-lg bg-neutral-800 border border-neutral-700 text-xs">
               Trocar
             </button>
-            <button
-              onClick={() => window.location.reload()}
-              className="h-8 px-3 rounded-lg bg-neutral-800 border border-neutral-700 text-xs"
-            >
+            <button onClick={() => window.location.reload()} className="h-8 px-3 rounded-lg bg-neutral-800 border border-neutral-700 text-xs">
               Recarregar
             </button>
           </div>
@@ -151,71 +153,34 @@ export default function Battle({ initialP1, initialP2, onBack }) {
           <MiniStatus who="Adversário" fighter={p2} active={turn === "enemy" && !isOver} right />
         </div>
 
-        {/* Abas: Ações | Log */}
-        <SegmentedTabs value={tab} onChange={setTab} className="mt-1" />
-
-        {/* Área de conteúdo que ocupa o restante da tela */}
-        <div className="flex-1 min-h-0">
-          {tab === "actions" ? (
-            <div className="h-full overflow-auto rounded-2xl border border-neutral-800 bg-neutral-900/60 p-2">
-              <div className="grid grid-cols-2 gap-2">
-                {p1.techniques.map((tech) => (
-                  <button
-                    key={tech.id}
-                    disabled={!canPlay}
-                    onClick={() => applyAttack("p1", tech)}
-                    className={`rounded-xl border px-2 py-2 text-left text-[12px] min-h-[76px] ${
-                      canPlay
-                        ? "border-neutral-700 bg-neutral-800/60 hover:bg-neutral-800 active:scale-[0.99]"
-                        : "border-neutral-900 bg-neutral-900/50 text-neutral-500"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <b className="truncate">{tech.name}</b>
-                      <span className="text-[10px] px-1 rounded bg-neutral-800 border border-neutral-700">
-                        {tech.kind}
-                      </span>
-                    </div>
-                    <div className="mt-0.5 text-neutral-300 line-clamp-2">{tech.desc}</div>
-                    <div className="mt-1 flex items-center justify-between text-[11px]">
-                      <span>Dano <b>{tech.power}</b></span>
-                      <span>
-                        Chakra <b className={p1.chakra < tech.cost ? "text-rose-400" : ""}>{tech.cost}</b>
-                      </span>
-                    </div>
-                  </button>
-                ))}
-                <button
-                  disabled={!canPlay}
-                  onClick={() => applyCharge("p1")}
-                  className={`rounded-xl border px-2 py-2 text-left text-[12px] min-h-[76px] ${
-                    canPlay
-                      ? "border-emerald-700 bg-emerald-900/30 hover:bg-emerald-900/40"
-                      : "border-neutral-900 bg-neutral-900/50 text-neutral-500"
-                  }`}
-                >
-                  <b>Carregar Chakra</b>
-                  <div className="text-neutral-300 mt-0.5">Concentra energia para próximos jutsus.</div>
-                  <div className="mt-1 text-[11px]">Ganho aprox. 28%.</div>
-                </button>
-              </div>
+        {/* Portrait = abas; Landscape = split view */}
+        {!landscape ? (
+          <>
+            <SegmentedTabs value={tab} onChange={setTab} className="mt-1" />
+            <div className="flex-1 min-h-0">
+              {tab === "actions" ? (
+                <ActionsPanel
+                  p1={p1}
+                  canPlay={canPlay}
+                  onAttack={(t) => applyAttack("p1", t)}
+                  onCharge={() => applyCharge("p1")}
+                />
+              ) : (
+                <LogPanel logRef={logRef} log={log} />
+              )}
             </div>
-          ) : (
-            <div
-              ref={logRef}
-              className="h-full overflow-auto rounded-2xl border border-neutral-800 bg-neutral-900/60 p-3"
-              role="log"
-              aria-live="polite"
-            >
-              <h2 className="font-bold text-sm mb-2">Log de Batalha</h2>
-              <ul className="space-y-1 text-[12px]">
-                {log.map((line, i) => (
-                  <li key={i} className="text-neutral-200">— {line}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+          </>
+        ) : (
+          <div className="flex-1 min-h-0 grid grid-cols-2 gap-2">
+            <ActionsPanel
+              p1={p1}
+              canPlay={canPlay}
+              onAttack={(t) => applyAttack("p1", t)}
+              onCharge={() => applyCharge("p1")}
+            />
+            <LogPanel logRef={logRef} log={log} />
+          </div>
+        )}
 
         {/* FX */}
         {fx && (
@@ -224,7 +189,6 @@ export default function Battle({ initialP1, initialP2, onBack }) {
           </div>
         )}
 
-        {/* dica / status final */}
         <div className="text-center text-xs text-neutral-400 mt-1">
           {isOver ? isOverText : "Dica: gerencie o chakra antes dos golpes fortes."}
         </div>
@@ -307,8 +271,12 @@ export default function Battle({ initialP1, initialP2, onBack }) {
                 </div>
                 <div className="mt-1 text-[12px] text-neutral-300 line-clamp-2">{technique.desc}</div>
                 <div className="mt-2 flex items-center justify-between text-[12px]">
-                  <span>Dano: <b>{technique.power}</b></span>
-                  <span>Chakra: <b className={p1.chakra < technique.cost ? "text-rose-400" : ""}>{technique.cost}</b></span>
+                  <span>
+                    Dano: <b>{technique.power}</b>
+                  </span>
+                  <span>
+                    Chakra: <b className={p1.chakra < technique.cost ? "text-rose-400" : ""}>{technique.cost}</b>
+                  </span>
                 </div>
               </button>
             ))}
@@ -377,7 +345,69 @@ export default function Battle({ initialP1, initialP2, onBack }) {
   )
 }
 
-// Componentes auxiliares (HUD compacto)
+// ===== Helpers usados no HUD compacto =====
+
+function ActionsPanel({ p1, canPlay, onAttack, onCharge }) {
+  return (
+    <div className="h-full overflow-auto rounded-2xl border border-neutral-800 bg-neutral-900/60 p-2">
+      <div className="grid grid-cols-2 gap-2">
+        {p1.techniques.map((tech) => (
+          <button
+            key={tech.id}
+            disabled={!canPlay}
+            onClick={() => onAttack(tech)}
+            className={`rounded-xl border px-2 py-2 text-left text-[12px] min-h-[76px] ${
+              canPlay
+                ? "border-neutral-700 bg-neutral-800/60 hover:bg-neutral-800 active:scale-[0.99]"
+                : "border-neutral-900 bg-neutral-900/50 text-neutral-500"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <b className="truncate">{tech.name}</b>
+              <span className="text-[10px] px-1 rounded bg-neutral-800 border border-neutral-700">
+                {tech.kind}
+              </span>
+            </div>
+            <div className="mt-0.5 text-neutral-300 line-clamp-2">{tech.desc}</div>
+            <div className="mt-1 flex items-center justify-between text-[11px]">
+              <span>Dano <b>{tech.power}</b></span>
+              <span>Chakra <b className={p1.chakra < tech.cost ? "text-rose-400" : ""}>{tech.cost}</b></span>
+            </div>
+          </button>
+        ))}
+        <button
+          disabled={!canPlay}
+          onClick={onCharge}
+          className={`rounded-xl border px-2 py-2 text-left text-[12px] min-h-[76px] ${
+            canPlay
+              ? "border-emerald-700 bg-emerald-900/30 hover:bg-emerald-900/40"
+              : "border-neutral-900 bg-neutral-900/50 text-neutral-500"
+          }`}
+        >
+          <b>Carregar Chakra</b>
+          <div className="text-neutral-300 mt-0.5">Concentra energia para próximos jutsus.</div>
+          <div className="mt-1 text-[11px]">Ganho aprox. 28%.</div>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function LogPanel({ logRef, log }) {
+  return (
+    <div
+      ref={logRef}
+      className="h-full overflow-auto rounded-2xl border border-neutral-800 bg-neutral-900/60 p-3"
+      role="log" aria-live="polite"
+    >
+      <h2 className="font-bold text-sm mb-2">Log de Batalha</h2>
+      <ul className="space-y-1 text-[12px]">
+        {log.map((line, i) => <li key={i} className="text-neutral-200">— {line}</li>)}
+      </ul>
+    </div>
+  )
+}
+
 function MiniStatus({ who, fighter, active, right = false }) {
   const hpPct = Math.round((fighter.hp / fighter.maxHP) * 100)
   const ckPct = Math.round((fighter.chakra / fighter.maxChakra) * 100)
@@ -419,7 +449,6 @@ function BarSmall({ label, pct, value, color }) {
   )
 }
 
-// Abas simples usadas no HUD compacto
 function SegmentedTabs({ value, onChange, className = "" }) {
   const base = "flex-1 h-10 rounded-xl border text-sm transition"
   const active = "bg-neutral-800 border-neutral-600"
