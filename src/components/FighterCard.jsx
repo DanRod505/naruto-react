@@ -1,19 +1,49 @@
+// src/components/FighterCard.jsx
 // Purpose: Displays fighter information with animated bars and badges inside the battle view.
 // Editing: Update layout or motion variants carefully; keep dimensions aligned with Battle screen grid.
 // Dependencies: framer-motion, Tailwind. Espera que cada fighter tenha `sprite` (string) em vez de `emoji`.
 
-import React from "react"
+import React, { useState } from "react"
 import { motion } from "framer-motion"
 
 const MotionDiv = motion.div
 
+// Garante que o caminho do sprite funcione no mobile (usa /public como base)
+function resolveSprite(path) {
+  if (!path) return null
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("/")) return path
+  const base = (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.BASE_URL) || "/"
+  return `${base}${path}`.replace(/\/\/+/g, "/")
+}
+
+// Fallback simples com monograma
+function Monogram({ name = "" }) {
+  const initials = name.split(" ").map(s => s[0]).filter(Boolean).slice(0, 2).join("").toUpperCase()
+  return (
+    <div className="h-full w-full flex items-center justify-center bg-neutral-800 text-neutral-300 text-xs font-bold">
+      {initials || "?"}
+    </div>
+  )
+}
+
 export function FighterCard({ fighter, side, active }) {
   const hpPct = fighter.hp / fighter.maxHP
   const chakraPct = fighter.chakra / fighter.maxChakra
+
+  // HP dinâmico: verde (>=60%), amarelo (30–59%), vermelho (<30%)
+  const hpClass =
+    hpPct >= 0.60 ? "from-emerald-600 to-emerald-500"
+    : hpPct >= 0.30 ? "from-amber-500 to-amber-400"
+    : "from-rose-600 to-rose-500"
+
   const badge =
     side === "left"
       ? "bg-orange-500/20 border-orange-500/30"
       : "bg-sky-500/20 border-sky-500/30"
+
+  // controlar erro de imagem (avatar e showcase usam o mesmo estado)
+  const [imgOk, setImgOk] = useState(true)
+  const spriteSrc = resolveSprite(fighter.sprite)
 
   return (
     <div
@@ -24,16 +54,17 @@ export function FighterCard({ fighter, side, active }) {
       {/* header: avatar + nome + badge */}
       <div className="flex items-center gap-3">
         <div className="h-12 w-12 sm:h-10 sm:w-10 rounded-xl overflow-hidden border border-neutral-800 bg-neutral-900">
-          {fighter.sprite ? (
+          {imgOk && spriteSrc ? (
             <img
-              src={fighter.sprite}
+              src={spriteSrc}
               alt={fighter.name}
-              className="h-full w-full object-cover"
-              loading="lazy"
+              className="h-full w-full object-contain"
+              loading="eager"
               decoding="async"
+              onError={() => setImgOk(false)}
             />
           ) : (
-            <div className="h-full w-full bg-neutral-800" />
+            <Monogram name={fighter.name} />
           )}
         </div>
 
@@ -64,38 +95,44 @@ export function FighterCard({ fighter, side, active }) {
           transition={{ duration: 6, repeat: Infinity }}
           aria-hidden
         />
-        {fighter.sprite ? (
+        {imgOk && spriteSrc ? (
           <img
-            src={fighter.sprite}
+            src={spriteSrc}
             alt={fighter.name}
             className={`max-h-28 sm:max-h-32 md:max-h-40 object-contain ${
               side === "left" ? "translate-x-[-6px]" : "translate-x-[6px]"
             }`}
-            loading="lazy"
+            loading="eager"
             decoding="async"
+            onError={() => setImgOk(false)}
           />
         ) : (
-          <div className="h-full w-full bg-neutral-900" />
+          <Monogram name={fighter.name} />
         )}
       </div>
 
       {/* barras */}
       <div className="mt-3 sm:mt-4 space-y-2">
-        <Bar label="HP" value={fighter.hp} max={fighter.maxHP} pct={hpPct} kind="hp" />
+        <Bar
+          label="HP"
+          value={fighter.hp}
+          max={fighter.maxHP}
+          pct={hpPct}
+          gradientClass={hpClass}
+        />
         <Bar
           label="Chakra"
           value={fighter.chakra}
           max={fighter.maxChakra}
           pct={chakraPct}
-          kind="chakra"
+          gradientClass="from-sky-600 to-sky-500"
         />
       </div>
     </div>
   )
 }
 
-function Bar({ label, value, max, pct, kind }) {
-  const color = kind === "hp" ? "from-rose-600 to-rose-500" : "from-sky-600 to-sky-500"
+function Bar({ label, value, max, pct, gradientClass }) {
   const width = Math.max(0, Math.min(100, Math.round(pct * 100))) // guarda
 
   return (
@@ -108,7 +145,7 @@ function Bar({ label, value, max, pct, kind }) {
       </div>
       <div className="h-3 sm:h-3.5 rounded-full bg-neutral-900 border border-neutral-800 overflow-hidden">
         <motion.div
-          className={`h-full bg-gradient-to-r ${color}`}
+          className={`h-full bg-gradient-to-r ${gradientClass}`}
           style={{ width: `${width}%` }}
           initial={false}
           animate={{ width: `${width}%` }}

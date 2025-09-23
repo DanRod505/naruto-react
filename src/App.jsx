@@ -21,8 +21,8 @@ export default function App() {
   const canFight = Boolean(fighters?.p1 && fighters?.p2)
   const version = `v${pkg.version}`
 
+  // Navegação padrão (cliques na Nav): impede 'fight' sem lutadores.
   const go = (next) => {
-    // Se tentar ir para "fight" sem lutadores, redireciona para "select"
     if (next === "fight" && !canFight) return setRoute("select")
     setRoute(next)
   }
@@ -39,17 +39,25 @@ export default function App() {
       {route === "select" && (
         <Select
           onStart={(p1, p2) => {
+            // 1) Salva os lutadores
             setFighters({ p1: cloneFighter(p1), p2: cloneFighter(p2) })
-            go("fight")
+            // 2) Vai DIRETO para a batalha (bypass do guard assíncrono)
+            setRoute("fight")
           }}
           onBack={() => go("home")}
         />
       )}
 
-      {route === "changelog" && <Changelog version={version} onBack={() => go("home")} />}
+      {route === "changelog" && (
+        <Changelog version={version} onBack={() => go("home")} />
+      )}
 
       {route === "fight" && canFight && (
-        <Battle initialP1={fighters.p1} initialP2={fighters.p2} onBack={() => go("select")} />
+        <Battle
+          initialP1={fighters.p1}
+          initialP2={fighters.p2}
+          onBack={() => go("select")}
+        />
       )}
     </AppShell>
   )
