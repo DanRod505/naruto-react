@@ -1,10 +1,10 @@
 // Purpose: Defines the selectable character roster with base stats and techniques for the battle flow.
-// Editing: Update stats or add fighters carefully; ensure each entry copies techniques from src/data/techniques.js.
-// Dependencies: Consumed by Select screen and cloneFighter in src/systems/battleEngine.js.
+// Editing: Atualize stats/techs com cuidado; cada técnica deve vir do mapa T em src/data/techniques.js.
+// Dependencies: Consumido pela Select e pela Battle; battleEngine assume que cada fighter pode ter `statuses`.
 
 import { T } from "./techniques";
 
-// 🔽 importe as imagens locais (Vite resolve e faz hash no build)
+// 🔽 sprites locais (Vite resolve e faz hash no build)
 import narutoSprite from "../assets/sprites/naruto.png";
 import sasukeSprite from "../assets/sprites/sasuke.png";
 import sakuraSprite from "../assets/sprites/sakura.png";
@@ -15,15 +15,16 @@ export const CHARACTER_LIBRARY = [
   {
     key: "naruto",
     name: "Naruto Uzumaki",
-    sprite: narutoSprite,              // <- imagem local
+    sprite: narutoSprite,
     maxHP: 160, hp: 160,
     maxChakra: 120, chakra: 80,
     speed: 12,
+    // mix: dano forte + pressão de clones + defesa + sustain
     techniques: [
-      T.rasengan,
-      T.kagebunshin,
-      T.kunai,
-      { id: "uzumaki", name: "Soco Giratorio", power: 16, cost: 0, kind: "melee", desc: "Ataque fisico sem custo." },
+      T.rasengan,        // attack (A)
+      T.kagebunshin,     // attack (B)
+      T.chakra_shield,   // support: shield
+      T.medical_heal,    // heal
     ],
   },
   {
@@ -33,7 +34,13 @@ export const CHARACTER_LIBRARY = [
     maxHP: 150, hp: 150,
     maxChakra: 130, chakra: 90,
     speed: 13,
-    techniques: [T.chidori, T.katon, T.shuriken, T.taijutsu],
+    // mix: burst elétrico + fogo com burn + pressão + controle (paralisia)
+    techniques: [
+      T.chidori,         // attack (A) com chance de paralysis
+      T.fireball,        // attack (B) com chance de burn
+      T.shuriken,        // attack (C) barato
+      T.paralysis_seal,  // support: paralysis (enemy)
+    ],
   },
   {
     key: "sakura",
@@ -42,11 +49,12 @@ export const CHARACTER_LIBRARY = [
     maxHP: 155, hp: 155,
     maxChakra: 110, chakra: 85,
     speed: 11,
+    // mix: melee preciso + kit médico (cura, cleanse, regen)
     techniques: [
-      T.palm,
-      T.kunai,
-      T.shuriken,
-      { id: "burst", name: "Impacto Concentrado", power: 20, cost: 10, kind: "melee", desc: "Forca precisa que treme o solo." },
+      T.palm,            // attack (C)
+      T.medical_heal,    // heal
+      T.cleanse,         // support: remove negativos
+      T.regen_tech,      // support: regen (self)
     ],
   },
   {
@@ -56,7 +64,13 @@ export const CHARACTER_LIBRARY = [
     maxHP: 150, hp: 150,
     maxChakra: 140, chakra: 100,
     speed: 14,
-    techniques: [T.chidori, T.kunai, T.tsukuyomi, T.taijutsu],
+    // mix: controle mental + burst + ferramenta + defesa
+    techniques: [
+      T.tsukuyomi,       // attack (S) com chance de paralysis
+      T.chidori,         // attack (A)
+      T.kunai,           // attack (D) barato
+      T.chakra_shield,   // support: shield
+    ],
   },
   {
     key: "gaara",
@@ -65,11 +79,12 @@ export const CHARACTER_LIBRARY = [
     maxHP: 165, hp: 165,
     maxChakra: 135, chakra: 95,
     speed: 10,
+    // mix: areia ofensiva + fogo + veneno + proteção
     techniques: [
-      T.sand,
-      T.kunai,
-      T.katon,
-      { id: "shell", name: "Casulo de Areia", power: 10, cost: 6, kind: "ninjutsu", desc: "Defesa agressiva que corta." },
+      T.sand,            // attack (B)
+      T.katon,           // attack (A) com chance de burn
+      T.poison_kunai,    // attack (C) com poison
+      T.chakra_shield,   // support: shield
     ],
   },
 ];

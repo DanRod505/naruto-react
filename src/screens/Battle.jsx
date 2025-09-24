@@ -1,13 +1,20 @@
 // src/screens/Battle.jsx
 // Purpose: Battle loop com layout desktop e HUD compacto (portrait & landscape).
-// Exibe "rank" das técnicas, nomes completos e mini-barras de HP/Chakra no mobile (com animação).
+// Integra status/efeitos: startTurn (ticks) + resolveTechnique (attack/heal/support).
+// SFX: ataque, cura, suporte, carga, ticks (veneno/queimadura/regen), paralisia e KO.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import FighterCard from "../components/FighterCard"
 import FXLayer from "../components/FXLayer"
 import SegmentedTabs from "../components/SegmentedTabs"
-import { clamp, computeDamage, chooseAI } from "../systems/battleEngine"
+import {
+  clamp,
+  chooseAI,
+  startTurn,
+  resolveTechnique,
+} from "../systems/battleEngine"
 import useCompactSpace from "../hooks/useCompactSpace"
+import { useSfx } from "../hooks/useSfx"
 
 // Garante que o sprite seja absoluto (funciona no mobile e no desktop)
 function resolveSprite(path) {
@@ -30,9 +37,11 @@ function Monogram({ name = "" }) {
 export default function Battle({ initialP1, initialP2, onBack }) {
   const [p1, setP1] = useState(initialP1)
   const [p2, setP2] = useState(initialP2)
-  const [turn, setTurn] = useState("player") // player | enemy | over
+  const [turn, setTurn] = useState("player") // "player" | "enemy" | "over"
   const [log, setLog] = useState([`Batalha iniciada! ${initialP1.name} vs. ${initialP2.name}.`])
   const [fx, setFx] = useState(null)
+
+  const sfx = useSfx()
 
   const { compact, landscape } = useCompactSpace({ minHeight: 420, minWidth: 480 })
   const [tab, setTab] = useState("actions") // usado no compacto-portrait
@@ -43,8 +52,11 @@ export default function Battle({ initialP1, initialP2, onBack }) {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
   }, [log])
 
-  const pushLog = useCallback((line) => {
-    setLog((entries) => [...entries, line].slice(-50))
+  const pushLog = useCallback((lineOrLines) => {
+    setLog((entries) => {
+      const lines = Array.isArray(lineOrLines) ? lineOrLines : [lineOrLines]
+      return [...entries, ...lines].slice(-50)
+    })
   }, [])
 
   const isOver = turn === "over"
@@ -56,6 +68,33 @@ export default function Battle({ initialP1, initialP2, onBack }) {
     return ""
   }, [p1.hp, p1.name, p2.hp, p2.name])
 
+  // Início de turno: aplica DOT/HoT, verifica paralisia e pode pular turno
+  useEffect(() => {
+    if (isOver) return
+    if (turn !== "player" && turn !== "enemy") return
+
+    const who = turn === "player" ? "p1" : "p2"
+    const r = startTurn(who, p1, p2)
+
+    if (turn === "player") setP1(r.p1); else setP2(r.p2)
+    if (r.lines?.length) {
+      pushLog(r.lines)
+      // 🔊 mapear mensagens para SFX
+      r.lines.forEach(line => {
+        if (line.includes("veneno")) sfx.play("poison_tick")
+        else if (line.includes("queimadura")) sfx.play("burn_tick")
+        else if (line.includes("regenera")) sfx.play("regen_tick")
+      })
+    }
+
+    if (r.skipTurn) {
+      pushLog("Turno pulado devido à paralisia.")
+      sfx.play("paralysis_skip")
+      setTurn(turn === "player" ? "enemy" : "player")
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turn])
+
   const applyCharge = useCallback(
     (who) => {
       if (isOver) return
@@ -65,6 +104,7 @@ export default function Battle({ initialP1, initialP2, onBack }) {
       const upd = { ...a, chakra: next }
 
       setFx({ from: who, kind: "charge" })
+      sfx.play("charge")
       pushLog(`${a.name} carrega chakra (+${Math.max(0, next - a.chakra)}).`)
 
       if (who === "p1") setP1(upd)
@@ -72,45 +112,38 @@ export default function Battle({ initialP1, initialP2, onBack }) {
 
       setTurn(who === "p1" ? "enemy" : "player")
     },
-    [isOver, p1, p2, pushLog],
+    [isOver, p1, p2, pushLog, sfx],
   )
 
-  const applyAttack = useCallback(
+  // Resolver técnica (attack/heal/support)
+  const applyTechnique = useCallback(
     (who, technique) => {
       if (isOver) return
-      const a = who === "p1" ? p1 : p2
-      const d = who === "p1" ? p2 : p1
+      const r = resolveTechnique(technique, who, p1, p2)
 
-      if (a.chakra < technique.cost) {
-        pushLog(`${a.name} tentou ${technique.name}, mas ficou sem chakra e precisou concentrar.`)
-        applyCharge(who)
-        return
+      setFx({ from: who, kind: technique.type === "attack" ? "attack" : "charge" })
+      if (technique.type === "attack") sfx.play("attack")
+      else if (technique.type === "heal") sfx.play("heal")
+      else if (technique.type === "support") {
+        if (technique.effect === "shield") sfx.play("shield")
+        else if (technique.effect === "cleanse") sfx.play("cleanse")
+        else sfx.play("ui")
       }
 
-      const { dmg, crit } = computeDamage(technique, a, d)
-      const updA = { ...a, chakra: clamp(a.chakra - technique.cost, 0, a.maxChakra) }
-      const updD = { ...d, hp: clamp(d.hp - dmg, 0, d.maxHP) }
+      setP1(r.p1); setP2(r.p2)
+      if (r.lines?.length) pushLog(r.lines)
 
-      setFx({ from: who, kind: "attack" })
-      pushLog(`${a.name} usa ${technique.name}${crit ? " (CRÍTICO!)" : ""} e causa ${dmg} de dano!`)
-
-      if (who === "p1") {
-        setP1(updA)
-        setP2(updD)
-      } else {
-        setP2(updA)
-        setP1(updD)
-      }
-
-      if (updD.hp <= 0) {
-        pushLog(`${d.name} foi derrotado!`)
+      const opp = who === "p1" ? r.p2 : r.p1
+      if (opp.hp <= 0) {
+        pushLog(`${opp.name} foi derrotado!`)
+        sfx.play("ko")
         setTurn("over")
         return
       }
 
-      setTurn(who === "p1" ? "enemy" : "player")
+      if (r.didAction) setTurn(who === "p1" ? "enemy" : "player")
     },
-    [applyCharge, isOver, p1, p2, pushLog],
+    [isOver, p1, p2, pushLog, sfx],
   )
 
   // Turno da IA
@@ -119,10 +152,10 @@ export default function Battle({ initialP1, initialP2, onBack }) {
     const timer = setTimeout(() => {
       const action = chooseAI(p2)
       if (action.type === "charge") applyCharge("p2")
-      else if (action.type === "attack" && action.technique) applyAttack("p2", action.technique)
+      else if (action.type === "attack" && action.technique) applyTechnique("p2", action.technique)
     }, 650)
     return () => clearTimeout(timer)
-  }, [turn, isOver, p2, applyAttack, applyCharge])
+  }, [turn, isOver, p2, applyCharge, applyTechnique])
 
   const canPlay = turn === "player" && !isOver
 
@@ -138,6 +171,7 @@ export default function Battle({ initialP1, initialP2, onBack }) {
             {p1.name} vs. {p2.name}
           </h1>
           <div className="flex items-center gap-2">
+            {/* Sem controle de áudio aqui */}
             <button onClick={onBack} className="h-8 px-3 rounded-lg bg-neutral-800 border border-neutral-700 text-xs">
               Trocar
             </button>
@@ -162,7 +196,7 @@ export default function Battle({ initialP1, initialP2, onBack }) {
                 <ActionsPanel
                   p1={p1}
                   canPlay={canPlay}
-                  onAttack={(t) => applyAttack("p1", t)}
+                  onAttack={(t) => applyTechnique("p1", t)}
                   onCharge={() => applyCharge("p1")}
                 />
               ) : (
@@ -175,7 +209,7 @@ export default function Battle({ initialP1, initialP2, onBack }) {
             <ActionsPanel
               p1={p1}
               canPlay={canPlay}
-              onAttack={(t) => applyAttack("p1", t)}
+              onAttack={(t) => applyTechnique("p1", t)}
               onCharge={() => applyCharge("p1")}
             />
             <LogPanel logRef={logRef} log={log} />
@@ -208,6 +242,7 @@ export default function Battle({ initialP1, initialP2, onBack }) {
         </h1>
 
         <div className="flex items-center gap-2">
+          {/* Sem controle de áudio aqui */}
           <button
             onClick={onBack}
             className="h-10 px-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm"
@@ -253,7 +288,7 @@ export default function Battle({ initialP1, initialP2, onBack }) {
               <button
                 key={technique.id}
                 disabled={!canPlay}
-                onClick={() => applyAttack("p1", technique)}
+                onClick={() => applyTechnique("p1", technique)}
                 className={`group rounded-2xl border px-3 py-3 text-left transition min-h-[96px] ${
                   canPlay
                     ? "border-neutral-700 hover:border-neutral-500 bg-neutral-800/60 hover:bg-neutral-800 active:scale-[0.99]"
@@ -280,16 +315,24 @@ export default function Battle({ initialP1, initialP2, onBack }) {
                 </div>
                 <div className="mt-1 text-[12px] text-neutral-300 line-clamp-2">{technique.desc}</div>
                 <div className="mt-2 flex items-center justify-between text-[12px]">
+                  {/* Para técnicas de cura/suporte, mostramos rótulos úteis */}
                   <span>
-                    Dano: <b>{technique.power}</b>
+                    {technique.type === "attack" ? <>Dano: <b>{technique.power}</b></> :
+                     technique.type === "heal" ? <>Cura: <b>{technique.power}{technique.scaling ? ` + ${Math.round(technique.scaling*100)}%` : ""}</b></> :
+                     technique.effect === "shield" ? <>Escudo: <b>{Math.round((technique.potency ?? 0.25)*100)}%</b></> :
+                     technique.effect === "regen" ? <>Regen: <b>{technique.duration ?? 2}t</b></> :
+                     technique.effect === "paralysis" ? <>Paralisia: <b>{technique.duration ?? 2}t</b></> :
+                     technique.effect === "cleanse" ? <>Limpeza</> :
+                     technique.inflict ? <>Efeito: <b>{technique.inflict.kind}</b></> : "—"}
                   </span>
                   <span>
-                    Chakra: <b className={p1.chakra < technique.cost ? "text-rose-400" : ""}>{technique.cost}</b>
+                    Chakra: <b className={p1.chakra < technique.cost ? "text-rose-400" : ""}>{technique.cost ?? 0}</b>
                   </span>
                 </div>
               </button>
             ))}
 
+            {/* Carregar Chakra */}
             <button
               disabled={!canPlay}
               onClick={() => applyCharge("p1")}
@@ -386,8 +429,16 @@ function ActionsPanel({ p1, canPlay, onAttack, onCharge }) {
             </div>
             <div className="mt-0.5 text-[12px] text-neutral-300 line-clamp-2">{tech.desc}</div>
             <div className="mt-1 flex items-center justify-between text-[12px]">
-              <span>Dano: <b>{tech.power}</b></span>
-              <span>Chakra: <b className={p1.chakra < tech.cost ? "text-rose-400" : ""}>{tech.cost}</b></span>
+              <span>
+                {tech.type === "attack" ? <>Dano: <b>{tech.power}</b></> :
+                 tech.type === "heal" ? <>Cura: <b>{tech.power}{tech.scaling ? ` + ${Math.round(tech.scaling*100)}%` : ""}</b></> :
+                 tech.effect === "shield" ? <>Escudo: <b>{Math.round((tech.potency ?? 0.25)*100)}%</b></> :
+                 tech.effect === "regen" ? <>Regen: <b>{tech.duration ?? 2}t</b></> :
+                 tech.effect === "paralysis" ? <>Paralisia: <b>{tech.duration ?? 2}t</b></> :
+                 tech.effect === "cleanse" ? <>Limpeza</> :
+                 tech.inflict ? <>Efeito: <b>{tech.inflict.kind}</b></> : "—"}
+              </span>
+              <span>Chakra: <b className={p1.chakra < (tech.cost ?? 0) ? "text-rose-400" : ""}>{tech.cost ?? 0}</b></span>
             </div>
           </button>
         ))}

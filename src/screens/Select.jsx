@@ -3,13 +3,15 @@
 // min-h 100dvh, split-view no landscape, e abas no portrait.
 // Baseado no padrão do Battle.jsx (mobile-first).
 
-import React, { useMemo, useState, useRef, useEffect } from "react"
+import React, { useMemo, useState, useRef, useEffect, useCallback } from "react"
 import { CHARACTER_LIBRARY } from "../data/characters"
 import useCompactSpace from "../hooks/useCompactSpace" // mesmo hook da Battle
+import { useSfx } from "../hooks/useSfx"
 
 export default function Select({ onStart, onBack }) {
   const [p1Sel, setP1Sel] = useState(null)
   const [p2Sel, setP2Sel] = useState(null)
+  const sfx = useSfx()
 
   // mesmo critério da Battle: compacto quando faltar ALTURA ou largura estreita
   const { compact, landscape } = useCompactSpace({ minHeight: 460, minWidth: 520 })
@@ -25,8 +27,33 @@ export default function Select({ onStart, onBack }) {
     if (ref) ref.scrollTop = 0
   }, [tab])
 
+  // Ações com SFX
+  const handleTab = useCallback((next) => {
+    setTab(next)
+    sfx.play("ui")
+  }, [sfx])
+
+  const handlePickP1 = useCallback((char) => {
+    setP1Sel(char)
+    sfx.play("ui")
+  }, [sfx])
+
+  const handlePickP2 = useCallback((char) => {
+    setP2Sel(char)
+    sfx.play("ui")
+  }, [sfx])
+
+  const handleBack = useCallback(() => {
+    sfx.play("ui")
+    onBack && onBack()
+  }, [onBack, sfx])
+
   const canStart = useMemo(() => !!(p1Sel && p2Sel), [p1Sel, p2Sel])
-  const start = () => { if (canStart) onStart(p1Sel, p2Sel) }
+  const start = () => {
+    if (!canStart) return
+    sfx.play("ui")
+    onStart(p1Sel, p2Sel)
+  }
 
   // ===========================
   // HUD COMPACTO (mobile)
@@ -47,7 +74,7 @@ export default function Select({ onStart, onBack }) {
           <div className="flex items-center gap-2 shrink-0">
             {onBack && (
               <button
-                onClick={onBack}
+                onClick={handleBack}
                 className="h-8 px-3 rounded-lg border border-neutral-700 bg-neutral-800/60 hover:bg-neutral-800 text-xs transition"
               >
                 Voltar
@@ -67,7 +94,7 @@ export default function Select({ onStart, onBack }) {
           <>
             <SegmentedSmall
               value={tab}
-              onChange={setTab}
+              onChange={handleTab}
               leftLabel="Você"
               rightLabel="Adversário"
               className="mt-1"
@@ -77,14 +104,14 @@ export default function Select({ onStart, onBack }) {
                 <SelectPanel
                   title="Você"
                   value={p1Sel}
-                  onChange={setP1Sel}
+                  onChange={handlePickP1}
                   gridRef={p1GridRef}
                 />
               ) : (
                 <SelectPanel
                   title="Adversário"
                   value={p2Sel}
-                  onChange={setP2Sel}
+                  onChange={handlePickP2}
                   disallowKey={p1Sel?.key}
                   gridRef={p2GridRef}
                 />
@@ -96,13 +123,13 @@ export default function Select({ onStart, onBack }) {
             <SelectPanel
               title="Você"
               value={p1Sel}
-              onChange={setP1Sel}
+              onChange={handlePickP1}
               gridRef={p1GridRef}
             />
             <SelectPanel
               title="Adversário"
               value={p2Sel}
-              onChange={setP2Sel}
+              onChange={handlePickP2}
               disallowKey={p1Sel?.key}
               gridRef={p2GridRef}
             />
@@ -144,7 +171,7 @@ export default function Select({ onStart, onBack }) {
         </div>
         {onBack && (
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className="h-10 px-4 rounded-xl border border-neutral-700 bg-neutral-800/60 hover:bg-neutral-800 text-sm transition"
           >
             Voltar
@@ -153,11 +180,11 @@ export default function Select({ onStart, onBack }) {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <SelectPanel title="Você" value={p1Sel} onChange={setP1Sel} />
+        <SelectPanel title="Você" value={p1Sel} onChange={handlePickP1} />
         <SelectPanel
           title="Adversário"
           value={p2Sel}
-          onChange={setP2Sel}
+          onChange={handlePickP2}
           disallowKey={p1Sel?.key}
         />
       </div>
