@@ -7,6 +7,25 @@ import Button from "../components/Button";
 
 const CHANGELOG = [
   {
+    version: "0.3.5",
+    date: "2025-09-24",
+    highlights: ["SFX Web Audio", "Controle global de áudio", "Select com SFX"],
+    changes: [
+      // Sistema de áudio (Web Audio API)
+      "Novo sistema de SFX sintetizados via Web Audio (sem assets). Sons para ataque, cura, suporte, carregar chakra, ticks de status (veneno/queimadura/regen), paralisia e KO.",
+      "Preferências de som (mute/volume) persistidas em localStorage. Desbloqueio de áudio em primeiro gesto do usuário.",
+      // Hook/Provider e robustez
+      "Criados SfxProvider/useSfx com fallback seguro (SSR/ambientes sem Web Audio). Ajuste do arquivo para .jsx e correções de linter.",
+      // UI
+      "Controle global de áudio (AudioToggle) adicionado na Nav, com botão mute/unmute e slider de volume.",
+      "Removido o controle de áudio da tela de Batalha — agora o controle é centralizado na Nav.",
+      // Integrações
+      "Battle toca SFX nos principais eventos (ataques, heals, suporte, carga, status, KO).",
+      "Select agora toca SFX em mudanças de aba, seleção de personagem, Iniciar Batalha e Voltar.",
+    ],
+  },
+
+  {
     version: "0.3.4",
     date: "2025-09-23",
     highlights: ["HUD mobile com barras", "HP dinâmico", "Ranks nas técnicas", "Fluxo de batalha direto"],
